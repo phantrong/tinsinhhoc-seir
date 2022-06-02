@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <style>
+        #table {
+            width: 100%;
+            margin: 0 auto;
+            border: 1px solid gray;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        #add {
+            display: flex;
+        }
+        
+        #information,
+        #upload {
+            width: 100%;
+            margin: 0 auto;
+            border: 1px solid gray;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        #information>* {
+            margin: 10px 0;
+        }
+        
+        .center {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .none {
+            display: none;
+        }
+        
+        #tableMain {
+            width: 100%;
+        }
+        
+        #main {
+            display: block;
+        }
+        
+        #result {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #result div {
+            font-size: 24px;
+            padding: 20px;
+        }
+        
+        .btnGroup {
+            width: 100%;
+            display: flex;
+            justify-content: space-evenly;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main">
+        <div id="table">
+            <h3 class="center">Bảng thống kê bệnh nhân</h3>
+            <hr />
+            <h4 class="center" id="empty">Chưa có bênh nhân nào!</h4>
+            <div class="table-responsive" style="max-height: 400px;">
+                <table class="table none" id="tableMain">
+                    <thead>
+                        <tr>
+                            <th>Tên/Mã bệnh nhân</th>
+                            <th>Thời điểm nhiễm</th>
+                            <th>Thời điểm khởi phát</th>
+                            <th>Số người tiếp xúc trực tiếp/số ngày</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <br>
+            <div class="btnGroup">
+                <button type="button" class="btn btn-primary" onclick="Calculate()">Tính toán và dự đoán</button>
+                <button type="button" class="btn btn-primary" onclick="ResetPage()">Làm mới</button>
+            </div>
+        </div>
+        <div id="add">
+            <div id="information">
+                <h3 class="center">Thêm bệnh nhân</h3>
+                <hr />
+                <div class="form-group">
+                    <label for="inputName">Tên/Mã bệnh nhân</label>
+                    <input type="text" class="form-control" id="inputName" placeholder="Tên/Mã bệnh nhân">
+                </div>
+                <div class="form-group">
+                    <label for="date1">Thời điểm nhiễm</label>
+                    <input type="date" class="form-control" id="date1" placeholder="Thời điểm nhiễm">
+                </div>
+                <div class="form-group">
+                    <label for="date2">Thời điểm khởi phát</label>
+                    <input type="date" class="form-control" id="date2" placeholder="Thời điểm khởi phát">
+                </div>
+                <div class="form-group">
+                    <label for="date2">Số người tiếp xúc trực tiếp/số ngày</label>
+                    <input type="number" class="form-control" id="nguoitiepxuc" placeholder="VD: 3.6">
+                </div>
+                <br>
+                <div class="center">
+                    <button type="button" class="btn btn-primary" onclick="Add()">Thêm</button>
+                </div>
+                <br>
+            </div>
+            <div id="upload">
+                <h3 class="center">Upload file excel có chứa dữ liệu bệnh nhân.</h3>
+                <hr />
+                <div class="mb-3 center">
+                    <input class="form-control" type="file" id="fileUpload">
+                </div>
+                <br>
+                <div class="center">
+                    <button type="button" class="btn btn-primary" onclick="Upload()">Thêm</button>
+                </div>
+                <br>
+            </div>
+        </div>
+    </div>
+    <div id="result">
+        <div>👉Kết quả ước tính R0 = <span id="resultR0-1"></span>, nghĩa là mỗi người có nguy cơ lây nhiễm cho <span id="resultR0-2"></span> người.</div>
+        <div>👉Nếu mong muốn có miễn dịch cộng đồng, thì phải <span id="result2"></span>% dân số mắc bệnh, điều đó dẫn tới hệ thống y tế không đủ sức chịu đựng, nên vẫn phải tích cực chống dịch.</div>
+        <div>👉Mỗi người dân tiếp xúc F1 có xác suất lây nhiễm theo ước tính khoảng <span id="resultF1"></span>%.</div>
+        <div>👉Nếu 30% dân số tham gia giảm tiếp xúc 40% thì sau <span id="result4"></span> ngày sẽ an toàn.</div>
+        <div>👉Nếu 70% dân số tham gia giảm tiếp xúc 50% thì sau <span id="result5"></span> ngày sẽ an toàn.</div>
+        <br>
+        <div class="center">
+            <button type="button" class="btn btn-primary" onclick="Back()">Quay lại</button>
+        </div>
+    </div>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.13.5/xlsx.full.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.13.5/jszip.js"></script>
+    <script type="text/javascript">
+        function addRow(name, date1, date2, nguoitiepxuc) {
+            var table = document.getElementById("tableMain");
+            var row = table.insertRow(table.rows.length);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            cell1.innerHTML = name;
+            cell2.innerHTML = date1;
+            cell3.innerHTML = date2;
+            cell4.innerHTML = Number(nguoitiepxuc);
+            document.getElementById("empty").style.display = "none";
+            document.getElementById("tableMain").style.display = "table";
+        }
+
+        function reset() {
+            document.getElementById("inputName").value = '';
+            document.getElementById("date1").value = '';
+            document.getElementById("date2").value = '';
+            document.getElementById("nguoitiepxuc").value = '';
+        }
+
+        function Back() {
+            document.getElementById("result").style.display = "none";
+            document.getElementById("main").style.display = "block";
+        }
+
+        function Calculate() {
+            var table = document.getElementById("tableMain");
+            if (table.rows.length <= 1) {
+                alert("Chưa có bệnh nhân nào!");
+            } else {
+                var date2Max = new Date('1000-01-01');
+                var date1Min = new Date('3000-01-01');
+                var totalTE = 0;
+                var total = 0;
+                var R0 = 0;
+                const TI = 14;
+                var totalNguoitiepxuc = 0;
+                var totalNguoi = 0;
+                for (i = 1; i < table.rows.length; i++) {
+                    var oCells = table.rows.item(i).cells;
+                    var date1 = new Date(oCells.item(1).innerHTML);
+                    var date2 = new Date(oCells.item(2).innerHTML);
+                    totalTE += Math.abs(date2 - date1) / (1000 * 3600 * 24);
+                    if (!isNaN(oCells.item(3).innerHTML) && Number(oCells.item(3).innerHTML) > 0) {
+                        totalNguoi++;
+                        totalNguoitiepxuc += Number(oCells.item(3).innerHTML);
+                    }
+                    if (date2 > date2Max) {
+                        date2Max = date2;
+                    }
+                    if (date1 < date1Min) {
+                        date1Min = date1;
+                    }
+                    total++;
+                }
+                var TE = (totalTE / total).toFixed();
+                var Tg = Number(TE) + TI;
+                var t = Math.abs(addDays(date2Max, 5) - date1Min) / (1000 * 3600 * 24);
+                var landa = (Math.log(total) / t).toFixed(4);
+                var p = (TE / Tg).toFixed(4);
+                R0 = (1 + landa * Tg + p * (1 - p) * landa * Tg * landa * Tg).toFixed();
+                var b = Number(R0 / ((totalNguoitiepxuc / totalNguoi).toFixed() * TI)).toFixed(3);
+                const a1 = 0.4;
+                const f1 = 0.3;
+                const a2 = 0.5;
+                const f2 = 0.7;
+                var R0VD1 = R0;
+                var R0VD2 = R0;
+                var songay1 = 0;
+                var songay2 = 0;
+                while (R0VD1 >= 1) {
+                    songay1 += TI;
+                    R0VD1 = (1 - (1 - a1 * a1) * f1) * R0VD1;
+                }
+                while (R0VD2 >= 1) {
+                    songay2 += TI;
+                    R0VD2 = (1 - (1 - a2 * a2) * f2) * R0VD2;
+                }
+                console.log(R0VD1, R0VD2);
+                document.getElementById("resultR0-1").innerText = R0;
+                document.getElementById("resultR0-2").innerText = R0;
+                document.getElementById("result2").innerText = (1 - 1 / R0).toFixed(2) * 100;
+                document.getElementById("resultF1").innerText = (b * 100).toFixed(1);
+                document.getElementById("result4").innerText = songay1;
+                document.getElementById("result5").innerText = songay2;
+
+                document.getElementById("main").style.display = "none";
+                document.getElementById("result").style.display = "block";
+            }
+        }
+
+        function addDays(date, days) {
+            var result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+        function ResetPage() {
+            window.location.reload();
+        }
+
+        function Add() {
+            var name = document.getElementById("inputName").value;
+            var date1 = document.getElementById("date1").value;
+            var date2 = document.getElementById("date2").value;
+            var nguoitiepxuc = document.getElementById("nguoitiepxuc").value;
+            if (name && date1 && date2 && nguoitiepxuc) {
+                addRow(name, date1, date2, nguoitiepxuc);
+                reset();
+            } else {
+                alert("Thiếu dữ liệu");
+            }
+        }
+
+        function Upload() {
+            var fileUpload = document.getElementById("fileUpload");
+            var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.xls|.xlsx)$/;
+            if (regex.test(fileUpload.value.toLowerCase())) {
+                if (typeof(FileReader) != "undefined") {
+                    var reader = new FileReader();
+
+                    //For Browsers other than IE.
+                    if (reader.readAsBinaryString) {
+                        reader.onload = function(e) {
+                            check(e.target.result);
+                        };
+                        reader.readAsBinaryString(fileUpload.files[0]);
+                    } else {
+                        //For IE Browser.
+                        reader.onload = function(e) {
+                            var data = "";
+                            var bytes = new Uint8Array(e.target.result);
+                            for (var i = 0; i < bytes.byteLength; i++) {
+                                data += String.fromCharCode(bytes[i]);
+                            }
+                            check(data);
+                        };
+                        reader.readAsArrayBuffer(fileUpload.files[0]);
+                    }
+                } else {
+                    alert("This browser does not support HTML5.");
+                }
+            } else {
+                alert("Vui lòng chọn file excel phù hợp.");
+            }
+            fileUpload.value = '';
+        };
+
+        function check(dataEx) {
+            var workbook = XLSX.read(dataEx, {
+                type: 'binary'
+            });
+            var firstSheet = workbook.SheetNames[0];
+            data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[firstSheet]);
+            data.map((bn) => {
+                addRow(bn['BN'], bn['Thời điểm nhiễm'], bn['Thời điểm khởi phát'], bn['Số người tiếp xúc trực tiếp/số ngày']);
+            });
+        };
+    </script>
+</body>
+
+</html>
